@@ -1,0 +1,26 @@
+#!/bin/bash
+
+if [[ -z "${PIPE_NAME_PREFIX}" ]]; then
+  echo "PIPE_NAME_PREFIX environment variable is not set."
+  exit 1
+fi
+
+# Check if the pipe name and command are provided
+if [[ $# -lt 2 ]]; then
+  echo "Usage: $0 <pipe_base_name> <command>"
+  exit 1
+fi
+
+PIPE_BASE="$1"
+COMMAND="$2"
+
+PIPE_IN="${PIPE_NAME_PREFIX}/${PIPE_BASE}_in"
+PIPE_OUT="${PIPE_NAME_PREFIX}/${PIPE_BASE}_out"
+
+# Send the command to the input pipe
+echo "${COMMAND}" > "${PIPE_IN}"
+
+# Read the output from the output pipe and print it
+while IFS= read -r line; do
+  echo "${line}"
+done <"${PIPE_OUT}"

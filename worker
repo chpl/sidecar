@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# Check if PIPE_NAME_PREFIX and  PIPE_NAME environment variables are set
+if [[ -z "${PIPE_NAME_PREFIX}" ]]; then
+  echo "PIPE_NAME_PREFIX environment variable is not set."
+  exit 1
+fi
+if [[ -z "${PIPE_NAME}" ]]; then
+  echo "PIPE_NAME environment variable is not set."
+  exit 1
+fi
+
+PIPE_IN="${PIPE_NAME_PREFIX}/${PIPE_NAME}_in"
+PIPE_OUT="${PIPE_NAME_PREFIX}/${PIPE_NAME}_out"
+
+# Create the input and output named pipes
+mkfifo "${PIPE_IN}"
+chmod 777 "${PIPE_IN}"
+mkfifo "${PIPE_OUT}"
+chmod 777 "${PIPE_OUT}"
+
+# Function to execute commands and send output back
+execute_command() {
+  while true; do
+    if read -r command <"${PIPE_IN}"; then
+      echo "Executing: ${command}"
+      # Execute the command and redirect output to the output pipe
+      eval "${command}" > "${PIPE_OUT}"
+    fi
+  done
+}
+
+# Function to clean up before exiting
+cleanup() {
+  echo "Cleaning up..."
+  rm -f "${PIPE_IN}" "${PIPE_OUT}"
+  exit 0
+}
+
+# Trap SIGTERM and SIGINT (Ctrl+C), then call the cleanup function
+trap cleanup SIGTERM SIGINT
+
+# Start listening and executing commands
+execute_command
+
+# Cleanup just in case (optional, for unexpected script exits)
+cleanup

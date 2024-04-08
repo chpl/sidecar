@@ -1,0 +1,9 @@
+image:
+  pullPolicy: "Never"
+sidecars:
+  - name: node
+    image: node:20
+    pullPolicy: "IfNotPresent"
+  - name: python
+    image: python
+    pullPolicy: "IfNotPresent"

@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sidecar-example
+  labels:
+    app: sidecar-example
+spec:
+  volumes:
+    - name: sidecar
+      emptyDir: {}
+    - name: workdir
+      emptyDir: {}
+  initContainers:
+    - name: init
+      image: sidecar-example
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      command: [ "/bin/sh", "-c"]
+      args:
+        - mkdir -p /var/lib/sidecar/bin;
+          mkdir -p /var/lib/sidecar/pipes;
+          cp -rvp /opt/sidecar/* /var/lib/sidecar/bin;
+      volumeMounts:
+        - name: sidecar
+          mountPath: /var/lib/sidecar
+  containers:
+    {{- range $i, $sidecar := .Values.sidecars }}
+    - name: {{ $sidecar.name }}
+      image: {{ $sidecar.image }}
+      imagePullPolicy: {{ $sidecar.pullPolicy }}
+      command: ["/var/lib/sidecar/bin/worker"]
+      env:
+        - name: PIPE_NAME_PREFIX
+          value: /var/lib/sidecar/pipes
+        - name: PIPE_NAME
+          value: {{ $sidecar.name }}
+      volumeMounts:
+        - name: sidecar
+          mountPath: /var/lib/sidecar
+        - name: workdir
+          mountPath: /workdir
+    {{- end }}
+    - name: main
+      image: sidecar-example
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      command: ["/bin/sh", "-c", "while true; do sleep 5; done"]
+      env:
+        - name: PIPE_NAME_PREFIX
+          value: /var/lib/sidecar/pipes
+      volumeMounts:
+        - name: sidecar
+          mountPath: /var/lib/sidecar
+        - name: workdir
+          mountPath: /workdir
+  restartPolicy: OnFailure
